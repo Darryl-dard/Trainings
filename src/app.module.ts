@@ -2,6 +2,7 @@ import { Module, ValidationPipe } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.validation';
 import { APP_PIPE } from '@nestjs/core';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
@@ -10,6 +11,7 @@ import { APP_PIPE } from '@nestjs/core';
       cache: true,
       validate: validateEnv,
     }),
+    PrismaModule,
   ],
   providers: [
     {
