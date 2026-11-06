@@ -81,7 +81,7 @@ jobs:
         run: |
           node dist/main &
           for i in $(seq 1 20); do
-            curl -fsS http://localhost:3000/health && exit 0
+            curl -fsS http://localhost:3005/health && exit 0
             sleep 1
           done
           echo "The compiled app did not become healthy"
