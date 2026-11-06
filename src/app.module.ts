@@ -1,9 +1,10 @@
 import { Module, ValidationPipe } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { validateEnv } from './config/env.validation';
 import { APP_PIPE } from '@nestjs/core';
-import { PrismaModule } from './prisma/prisma.module';
+import { validateEnv } from './config/env.validation';
+import { HealthModule } from './health/health.module';
 import { MembersModule } from './members/members.module';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { MembersModule } from './members/members.module';
     }),
     PrismaModule,
     MembersModule,
+    HealthModule,
   ],
   providers: [
     {
