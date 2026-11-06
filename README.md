@@ -1,98 +1,120 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Orvane
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API de gestion de membres : CRUD, validation, PostgreSQL, documentation OpenAPI, tests, Docker et CI.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+**Stack** : NestJS 11, TypeScript, Prisma 7 (adapter `pg`), PostgreSQL 17, Vitest, Docker, GitHub Actions. Node 22.
 
-## Description
+## Démarrage rapide (Docker)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+Prérequis : Docker.
 
 ```bash
-$ npm install
+cp .env.example .env        # puis remplace POSTGRES_PASSWORD (et la même valeur dans DATABASE_URL)
+docker compose up -d --build
 ```
 
-## Compile and run the project
+Cela démarre PostgreSQL, applique les migrations (service `migrate`), puis lance l'API.
+
+- API : http://localhost:3005
+- Santé : http://localhost:3005/health
+
+Le conteneur tourne en `NODE_ENV=production` : la documentation Swagger y est désactivée.
+
+Arrêter : `docker compose down` (ajoute `-v` pour supprimer aussi les données).
+
+## Développement local
+
+Prérequis : Node 22, Docker.
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+docker compose up -d db          # PostgreSQL seul
+npm ci
+npm run prisma:generate          # génère le client Prisma (non versionné)
+npm run prisma:migrate:deploy    # applique les migrations
+npm run dev
 ```
 
-## Run tests
+- Documentation interactive (hors production) : http://localhost:3005/docs
+- Spécification JSON : http://localhost:3005/docs/json
+
+### Modifier le schéma de données
+
+1. Édite `prisma/schema.prisma`.
+2. `npm run prisma:migrate:dev -- --name <nom_de_la_migration>` crée et applique la migration.
+3. `npm run prisma:generate` régénère le client.
+4. Versionne le dossier `prisma/migrations`.
+
+## API
+
+| Méthode | Route          | Description                       | Succès |
+|---------|----------------|-----------------------------------|--------|
+| POST    | `/members`     | Créer un membre                   | 201    |
+| GET     | `/members`     | Lister (paginé : `page`, `limit`) | 200    |
+| GET     | `/members/:id` | Lire un membre                    | 200    |
+| PATCH   | `/members/:id` | Modifier partiellement            | 200    |
+| DELETE  | `/members/:id` | Supprimer                         | 204    |
+| GET     | `/health`      | Santé de l'app et de la base      | 200    |
+
+Erreurs : `400` (validation, UUID invalide, champ inconnu), `404` (membre introuvable), `409` (email déjà utilisé),
+`503` (`/health` : base injoignable).
+
+L'email est nettoyé et converti en minuscules ; les noms sont nettoyés.
+
+## Tests
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm test            # tests unitaires (Prisma mocké)
+npm run test:e2e    # tests e2e sur une vraie base PostgreSQL de test
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Les tests e2e vident la table `members`. Ils exigent `TEST_DATABASE_URL` et refusent de tourner si le nom de la base ne
+se termine pas par `_test`. Préparation, une seule fois :
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker compose up -d db
+docker compose exec db psql -U <POSTGRES_USER> -d <POSTGRES_DB> -c "CREATE DATABASE orvane_test"
+DATABASE_URL="postgresql://<user>:<password>@localhost:5432/orvane_test" npx prisma migrate deploy
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Qualité
 
-## Resources
+```bash
+npm run lint        # vérifie (ne modifie rien)
+npm run lint:fix    # corrige
+npm run format      # Prettier
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+## Intégration continue
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+`.github/workflows/ci.yml` exécute, à chaque push sur `main` et chaque pull request :
 
-## Support
+- job `ci` : installation, génération du client Prisma, lint, tests unitaires, build, migrations puis tests e2e (
+  PostgreSQL en service) ;
+- job `docker` : construction de l'image de production.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Variables d'environnement
 
-## Stay in touch
+| Variable                                                             | Rôle                                                                    |
+|----------------------------------------------------------------------|-------------------------------------------------------------------------|
+| `NODE_ENV`                                                           | `development`, `test` ou `production` (désactive Swagger en production) |
+| `PORT`                                                               | Port d'écoute de l'app (défaut 3005)                                    |
+| `DATABASE_URL`                                                       | URL PostgreSQL de l'app (validée au démarrage)                          |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT` | Conteneur PostgreSQL (Docker Compose)                                   |
+| `APP_PORT`                                                           | Port hôte du conteneur `app` (défaut 3005)                              |
+| `TEST_DATABASE_URL`                                                  | Base dédiée aux tests e2e (nom en `_test`)                              |
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+L'app refuse de démarrer si la configuration est invalide.
 
-## License
+## Structure
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```
+src/
+  config/      validation de l'environnement, Swagger
+  common/      utilitaires partagés (transformations de DTO)
+  health/      endpoint /health (Terminus)
+  members/     module CRUD (controller, service, DTO, entité)
+  prisma/      PrismaService et PrismaModule
+  generated/   client Prisma (généré, non versionné)
+prisma/        schéma et migrations
+test/          tests e2e
+```
